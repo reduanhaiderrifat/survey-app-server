@@ -56,6 +56,12 @@ async function run() {
       const result = await surveyorCollection.find(query).toArray();
       res.send(result);
     });
+    app.get('/surveyUpdate/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id:new ObjectId(id)}; 
+      const result = await surveyorCollection.findOne(query);
+      res.send(result);
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
