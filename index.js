@@ -34,6 +34,20 @@ async function run() {
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const { email, uid } = user;
+      if (!email || !uid) {
+        return res.status(400).send({ message: "Please email or uid" });
+      }
+      const query = { $or: [{ email: email }, { uid: uid }] };
+      const isExit = await userCollection.findOne(query);
+      if (isExit) {
+        return res.status(409).send({ message: "User already exists" });
+      }
+      const result = await userCollection.insertOne(user);
+      res.status(201).send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
