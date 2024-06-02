@@ -62,6 +62,13 @@ async function run() {
       const result = await surveyorCollection.findOne(query);
       res.send(result);
     })
+    app.post("/surveys", async (req, res) => {
+      const surveyor = req.body;
+      surveyor.status = "publish";
+      surveyor.timestamp = new Date();
+      const result = await surveyorCollection.insertOne(surveyor);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
