@@ -25,6 +25,7 @@ async function run() {
     const userCollection = client.db("survey").collection("users");
     const surveyorCollection = client.db("survey").collection("surveyors");
     const userSurveyCollection = client.db("survey").collection("userSurvey");
+    const reportCollection = client.db("survey").collection("report");
 
   // --------------------------
   //user related api
@@ -86,7 +87,7 @@ async function run() {
 
     //get user api 
     app.get('/allSurvey',async(req,res)=>{
-   const result = await surveyorCollection.find().toArray()
+   const result = await surveyorCollection.find({ status: 'publish' }).toArray()
    res.send(result)
     })
     app.get('/userSurvey/:id',async(req,res)=>{
@@ -112,6 +113,11 @@ async function run() {
       const result = await userSurveyCollection.insertOne(userSurvey)
       res.send(result)
 
+    })
+    app.post('/report',async(req,res)=>{
+      const report = req.body;
+      const result = await reportCollection.insertOne(report)                 
+      res.send(result)
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
