@@ -26,6 +26,7 @@ async function run() {
     const surveyorCollection = client.db("survey").collection("surveyors");
     const userSurveyCollection = client.db("survey").collection("userSurvey");
     const reportCollection = client.db("survey").collection("report");
+    const commentCollection = client.db("survey").collection("comment");
 
   // --------------------------
   //user related api
@@ -114,9 +115,22 @@ async function run() {
       res.send(result)
 
     })
+    //report api user
+    app.get('/report/:uid',async(req,res)=>{
+      const uid = req.params.uid;
+      const query = {uid:uid}
+      const result = await reportCollection.find(query).toArray()
+      res.send(result)
+
+    })
     app.post('/report',async(req,res)=>{
       const report = req.body;
       const result = await reportCollection.insertOne(report)                 
+      res.send(result)
+    })
+    app.post('/comment',async(req,res)=>{
+      const report = req.body;
+      const result = await commentCollection.insertOne(report)                 
       res.send(result)
     })
     // Send a ping to confirm a successful connection
