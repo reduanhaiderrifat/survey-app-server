@@ -82,6 +82,12 @@ async function run() {
       res.send(result);
       
     })
+
+    //get user api 
+    app.get('/allSurvey',async(req,res)=>{
+   const result = await surveyorCollection.find().toArray()
+   res.send(result)
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
