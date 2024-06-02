@@ -26,6 +26,14 @@ async function run() {
     const surveyorCollection = client.db("survey").collection("surveyors");
 
   // --------------------------
+  //user related api
+    //alluser get
+    app.get("/users/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { uid: uid };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
