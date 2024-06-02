@@ -24,6 +24,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     const userCollection = client.db("survey").collection("users");
     const surveyorCollection = client.db("survey").collection("surveyors");
+    const userSurveyCollection = client.db("survey").collection("userSurvey");
 
   // --------------------------
   //user related api
@@ -105,6 +106,12 @@ async function run() {
       }
       const result = await surveyorCollection.updateOne(query,updateDoc)
       res.send(result)
+    })
+    app.post('/userSurveyPost',async(req,res)=>{
+      const userSurvey = req.body;
+      const result = await userSurveyCollection.insertOne(userSurvey)
+      res.send(result)
+
     })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
