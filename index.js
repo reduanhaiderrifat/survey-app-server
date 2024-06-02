@@ -95,6 +95,17 @@ async function run() {
       res.send(result)
 
     })
+    app.patch('/userVote/:id',async(req,res)=>{
+      const id = req.params.id;
+      const {vote} = req.body
+      const voteparseInt = parseInt(vote, 10);
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $inc: { 'options.vote': voteparseInt }
+      }
+      const result = await surveyorCollection.updateOne(query,updateDoc)
+      res.send(result)
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
