@@ -48,6 +48,14 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.status(201).send(result);
     });
+    
+    // surveyor related api
+    app.get("/survey/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { useruid: uid };
+      const result = await surveyorCollection.find(query).toArray();
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
