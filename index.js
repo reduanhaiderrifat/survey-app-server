@@ -199,9 +199,25 @@ async function run() {
       res.send(result);
     });
 //admin 
-app.get('/adminUsers',async(req,res)=>{
-  const result = await userCollection.find().toArray();
+app.get('/adminUsers', async (req, res) => {
+  const { status } = req.query;
+  let query = {};
+  if (status) {
+    query = { role: status };
+  }
+  const result = await userCollection.find(query).toArray();
   res.send(result);
+});
+app.patch('/adminUpdate/:id',async(req,res)=>{
+  const id=req.params.id;
+  const {role} = req.body;
+  const query = { _id: new ObjectId(id) };
+  const updateDoc = {
+    $set: { role: role },
+  }
+  const result = await userCollection.updateOne(query, updateDoc);
+  res.send(result)
+
 })
     //stripe pyment api
     app.post("/create-payment-intent", async (req, res) => {
