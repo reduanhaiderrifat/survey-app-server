@@ -110,7 +110,7 @@ async function run() {
           { voteId: new ObjectId(id) }, 
           { voteId: id }, 
         ],
-      };
+      }
       if (query) {
         const result = await userSurveyCollection.find(query).toArray();
         res.send(result);
@@ -198,7 +198,11 @@ async function run() {
       const result = await reportCollection.deleteOne(query);
       res.send(result);
     });
-
+//admin 
+app.get('/adminUsers',async(req,res)=>{
+  const result = await userCollection.find().toArray();
+  res.send(result);
+})
     //stripe pyment api
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
