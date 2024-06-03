@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const app = express();
 const stripe = require("stripe")(process.env.DB_STRIPE_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -31,7 +31,35 @@ async function run() {
     const reportCollection = client.db("survey").collection("report");
     const commentCollection = client.db("survey").collection("comment");
     const paymentCollection = client.db("survey").collection("payment");
+    //--------------jwt----------------
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.DB_SECRET_JWT, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
 
+    //-------------------jwt end------------------------
+
+    // ..middles ware
+    const verifyToken = (req, res, next) => {
+      console.log(req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ massage: "Forbidden Access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      if (!token) {
+        return res.status(401).send({ massage: "Forbidden Access" });
+      }
+      jwt.verify(token, process.env.DB_SECRET_JWT, (err, decoded) => {
+        if (err) {
+          return res.status(403).send({ massage: "Forbidden Access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
     // --------------------------
     //user related api
     //alluser get
@@ -39,6 +67,12 @@ async function run() {
       const uid = req.params.uid;
       const query = { uid: uid };
       const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/user/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { uid: uid };
+      const result = await userCollection.findOne(query);
       res.send(result);
     });
     app.post("/users", async (req, res) => {
@@ -69,6 +103,19 @@ async function run() {
       const result = await surveyorCollection.findOne(query);
       res.send(result);
     });
+    app.get("/ids/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        $or: [
+          { voteId: new ObjectId(id) }, 
+          { voteId: id }, 
+        ],
+      };
+      if (query) {
+        const result = await userSurveyCollection.find(query).toArray();
+        res.send(result);
+      }
+    });
     app.post("/surveys", async (req, res) => {
       const surveyor = req.body;
       surveyor.status = "publish";
@@ -94,7 +141,7 @@ async function run() {
     });
 
     //get user api
-    app.get("/allSurvey", async (req, res) => {
+    app.get("/allSurvey", verifyToken, async (req, res) => {
       const result = await surveyorCollection
         .find({ status: "publish" })
         .toArray();
@@ -104,6 +151,12 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await surveyorCollection.findOne(query);
+      res.send(result);
+    });
+    app.get("/pro-user/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { uid: uid };
+      const result = await userCollection.findOne(query);
       res.send(result);
     });
     app.patch("/userVote/:id", async (req, res) => {
@@ -160,13 +213,19 @@ async function run() {
         clientSecret: paymentIntent.client_secret,
       });
     });
-    app.patch('/updatedRole/:uid',async(req,res)=>{
-      const uid = req.params.uid;
-      const query = {uid:uid};
-      const updateDoc = {$set:{role:'Pro-User'}};
-      const result = await userCollection.updateOne(query,updateDoc);
+
+    app.post("/payment", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment);
       res.send(result);
-    })
+    });
+    app.patch("/updatedRole/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { uid: uid };
+      const updateDoc = { $set: { role: "Pro-User" } };
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
