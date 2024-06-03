@@ -106,11 +106,8 @@ async function run() {
     app.get("/ids/:id", async (req, res) => {
       const id = req.params.id;
       const query = {
-        $or: [
-          { voteId: new ObjectId(id) }, 
-          { voteId: id }, 
-        ],
-      }
+        $or: [{ voteId: new ObjectId(id) }, { voteId: id }],
+      };
       if (query) {
         const result = await userSurveyCollection.find(query).toArray();
         res.send(result);
@@ -198,27 +195,38 @@ async function run() {
       const result = await reportCollection.deleteOne(query);
       res.send(result);
     });
-//admin 
-app.get('/adminUsers', async (req, res) => {
-  const { status } = req.query;
-  let query = {};
-  if (status) {
-    query = { role: status };
-  }
-  const result = await userCollection.find(query).toArray();
-  res.send(result);
-});
-app.patch('/adminUpdate/:id',async(req,res)=>{
-  const id=req.params.id;
-  const {role} = req.body;
-  const query = { _id: new ObjectId(id) };
-  const updateDoc = {
-    $set: { role: role },
-  }
-  const result = await userCollection.updateOne(query, updateDoc);
-  res.send(result)
-
-})
+    //admin
+    app.get("/adminUsers", async (req, res) => {
+      const { status } = req.query;
+      let query = {};
+      if (status) {
+        query = { role: status };
+      }
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/adminSurveyResponse", async (req, res) => {
+      const result = await surveyorCollection.find().toArray();
+      res.send(result);
+    });
+    app.patch("/adminStatusUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = { $set: { status: status } };
+      const result = await surveyorCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+    app.patch("/adminUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const { role } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { role: role },
+      };
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
     //stripe pyment api
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
