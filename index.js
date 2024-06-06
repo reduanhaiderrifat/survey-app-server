@@ -27,10 +27,14 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     const userCollection = client.db("survey").collection("users");
     const surveyorCollection = client.db("survey").collection("surveyors");
+    const surveyorResponseCollection = client
+      .db("survey")
+      .collection("surveyorResponse");
     const userSurveyCollection = client.db("survey").collection("userSurvey");
     const reportCollection = client.db("survey").collection("report");
     const commentCollection = client.db("survey").collection("comment");
     const paymentCollection = client.db("survey").collection("payment");
+    const feedbackCollection = client.db("survey").collection("feedback");
     //--------------jwt----------------
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -66,7 +70,17 @@ async function run() {
     app.get("/users/:uid", async (req, res) => {
       const uid = req.params.uid;
       const query = { uid: uid };
-      const result = await userCollection.find(query).toArray();
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+    app.get("/surveyorsData", async (req, res) => {
+      const category = req.query.category;
+      const sortByVotes = req.query.sortByVotes === "true";
+      const query = category ? { category: category } : {};
+      const result = await surveyorCollection
+        .find(query)
+        .sort(sortByVotes ? { "options.vote": -1 } : {})
+        .toArray();
       res.send(result);
     });
     app.get("/user/:uid", async (req, res) => {
@@ -95,6 +109,19 @@ async function run() {
       const uid = req.params.uid;
       const query = { useruid: uid };
       const result = await surveyorCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/surveyResponse/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { surveyorUid: uid };
+      const result = await feedbackCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/surveyFeedBackItem/:feedId", async (req, res) => {
+      const id = req.params.feedId;
+      const query = { _id: new ObjectId(id) };
+      const result = await surveyorCollection.findOne(query);
+
       res.send(result);
     });
     app.get("/surveyUpdate/:id", async (req, res) => {
@@ -136,6 +163,25 @@ async function run() {
       );
       res.send(result);
     });
+    //Home Page  section api dort by vote
+    app.get("/homeSort", async (req, res) => {
+      const topSurveys = await surveyorCollection
+        .find()
+        .sort({ "options.vote": -1 })
+        .limit(6)
+        .toArray();
+
+      res.send(topSurveys);
+    });
+    app.get("/homeRecent", async (req, res) => {
+      const topSurveys = await surveyorCollection
+        .find()
+        .sort({ timestamp: -1 })
+        .limit(6)
+        .toArray();
+
+      res.send(topSurveys);
+    });
 
     //get user api
     app.get("/allSurvey", verifyToken, async (req, res) => {
@@ -167,8 +213,45 @@ async function run() {
       const result = await surveyorCollection.updateOne(query, updateDoc);
       res.send(result);
     });
-    app.post("/userSurveyPost", async (req, res) => {
+
+    app.get("/voteGet/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { surveyId: id };
+      const result = await surveyorResponseCollection.find(query).toArray();
+      res.send(result);
+    });
+    //get data if already have participate
+    app.get("/userMatch/:uid", async (req, res) => {
+      const uid = req.params.uid;
+      const query = { uid: uid };
+      const result = await userSurveyCollection.findOne(query)
+      res.send(result)
+    });
+    app.post("/userVotePost/:id", async (req, res) => {
+      const id = req.params.id;
+      const answer = req.body;
+      const asnwers = { answer, surveyId: id };
+      const query = { _id: new ObjectId(id) };
+      const isExit = await surveyorCollection.findOne(query);
+      if (isExit) {
+        const result = await surveyorResponseCollection.insertOne(asnwers);
+        res.send(result);
+      }
+    });
+    app.post("/userSurveyPost/:uid", async (req, res) => {
+      const useruid = req.params.uid;
       const userSurvey = req.body;
+      const isExist = await userSurveyCollection.findOne({
+        uid: useruid,
+        voteId: userSurvey.voteId,
+      });
+      if (isExist) {
+        const result = await userSurveyCollection.updateOne(
+          { uid: useruid, voteId: userSurvey.voteId },
+          { $set: { vote: userSurvey.vote, answers: userSurvey.answers } }
+        );
+        return res.send(result);
+      }
       const result = await userSurveyCollection.insertOne(userSurvey);
       res.send(result);
     });
@@ -197,10 +280,10 @@ async function run() {
     });
     //admin
     app.get("/adminUsers", async (req, res) => {
-      const { status } = req.query;
+      const { role } = req.query;
       let query = {};
-      if (status) {
-        query = { role: status };
+      if (role) {
+        query = { role: role };
       }
       const result = await userCollection.find(query).toArray();
       res.send(result);
@@ -209,9 +292,19 @@ async function run() {
       const result = await surveyorCollection.find().toArray();
       res.send(result);
     });
+    app.get("/payments", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+    app.post("/feedbackPost", async (req, res) => {
+      const feedback = req.body;
+      const result = await feedbackCollection.insertOne(feedback);
+      res.send(result);
+    });
     app.patch("/adminStatusUpdate/:id", async (req, res) => {
       const id = req.params.id;
       const { status } = req.body;
+      console.log(typeof id);
       const query = { _id: new ObjectId(id) };
       const updateDoc = { $set: { status: status } };
       const result = await surveyorCollection.updateOne(query, updateDoc);
