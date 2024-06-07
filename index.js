@@ -8,7 +8,16 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const port = process.env.PORT || 5000;
 
-app.use(cors({ origin: ["http://localhost:5173",'https://survey-app-w3.web.app','https://survey-app-w3.firebaseapp.com'], credentials: true }));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://survey-app-w3.web.app",
+      "https://survey-app-w3.firebaseapp.com",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.u9zrvau.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -35,6 +44,8 @@ async function run() {
     const commentCollection = client.db("survey").collection("comment");
     const paymentCollection = client.db("survey").collection("payment");
     const feedbackCollection = client.db("survey").collection("feedback");
+    const likesCollection = client.db("survey").collection("likes");
+    const dislikesCollection = client.db("survey").collection("dislikes");
     //--------------jwt----------------
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -48,7 +59,6 @@ async function run() {
 
     // ..middles ware
     const verifyToken = (req, res, next) => {
-      console.log(req.headers);
       if (!req.headers.authorization) {
         return res.status(401).send({ massage: "Forbidden Access" });
       }
@@ -66,7 +76,7 @@ async function run() {
     };
     const verifyAdmin = async (req, res, next) => {
       const uid = req.decoded?.uid;
-      console.log(uid);
+
       const query = { uid: uid };
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role == "admin";
@@ -77,7 +87,7 @@ async function run() {
     };
     const verifySurveyor = async (req, res, next) => {
       const uid = req.decoded?.uid;
-      console.log(uid);
+
       const query = { uid: uid };
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role == "surveyor";
@@ -150,12 +160,17 @@ async function run() {
       const result = await surveyorCollection.find(query).toArray();
       res.send(result);
     });
-    app.get('/userComments/:uid',verifyToken,verifySurveyor,async(req,res)=>{
-      const uid=req.params.uid;
-      const query={uid:uid};
-      const result=await commentCollection.find(query).toArray();
-      res.send(result)
-    })
+    app.get(
+      "/userComments/:uid",
+      verifyToken,
+      verifySurveyor,
+      async (req, res) => {
+        const uid = req.params.uid;
+        const query = { uid: uid };
+        const result = await commentCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
     app.get("/surveyResponse/:uid", verifyToken, async (req, res) => {
       const uid = req.params.uid;
       const query = { surveyorUid: uid };
@@ -273,7 +288,6 @@ async function run() {
     //get data if already have participate
     app.get("/userMatch/:itemId", verifyToken, async (req, res) => {
       const itemId = req.params.itemId;
-      console.log(itemId);
       const query = {
         voteId: itemId,
       };
@@ -315,7 +329,7 @@ async function run() {
       const result = await reportCollection.find(query).toArray();
       res.send(result);
     });
-    app.post("/report",verifyToken, async (req, res) => {
+    app.post("/report", verifyToken, async (req, res) => {
       const report = req.body;
       const result = await reportCollection.insertOne(report);
       res.send(result);
@@ -325,7 +339,7 @@ async function run() {
       const result = await commentCollection.insertOne(report);
       res.send(result);
     });
-    app.delete("/report/:id",verifyToken, async (req, res) => {
+    app.delete("/report/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await reportCollection.deleteOne(query);
@@ -408,6 +422,47 @@ async function run() {
       const query = { uid: uid };
       const updateDoc = { $set: { role: "Pro-User" } };
       const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    //like & dislike
+    app.post("/like/:id", async (req, res) => {
+      const id = req.params.id;
+      const likeData = req.body;
+      const uid = likeData.uid;
+      const query = { itemId: id, uid: uid };
+      const idExist = await likesCollection.findOne(query);
+      const iddo = await dislikesCollection.findOne(query);
+      if (idExist || iddo) {
+        res.send("already liked");
+        return;
+      }
+      const result = await likesCollection.insertOne(likeData);
+      res.send(result);
+    });
+    app.get("/like/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await likesCollection.find({ itemId: id }).toArray();
+      res.send(result);
+    });
+    app.post("/dislike/:id", async (req, res) => {
+      const id = req.params.id;
+      const likeData = req.body;
+      const uid = likeData.uid;
+      const query = { itemId: id, uid: uid };
+      const idExist = await dislikesCollection.findOne(query);
+      const isdo = await likesCollection.findOne(query);
+      if (idExist || isdo) {
+        res.send("already liked");
+        return;
+      }
+      const result = await dislikesCollection.insertOne(likeData);
+      res.send(result);
+    });
+    app.get("/dislike/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await dislikesCollection.find({ itemId: id }).toArray();
       res.send(result);
     });
     // Send a ping to confirm a successful connection
