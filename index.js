@@ -270,10 +270,9 @@ async function run() {
     app.patch("/userVote/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const { vote } = req.body;
-      const voteparseInt = parseInt(vote, 10);
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
-        $inc: { "options.vote": voteparseInt },
+        $set: { "options.vote": vote },
       };
       const result = await surveyorCollection.updateOne(query, updateDoc);
       res.send(result);
